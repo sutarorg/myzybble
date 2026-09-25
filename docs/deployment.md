@@ -95,17 +95,30 @@ Rules that hold in every environment:
 
    The full list with commentary lives in `.env.example`. Nothing else is read.
 3. **Cron jobs** come from `vercel.json` and are created automatically on
-   deploy: `/api/cron/campaigns` every 5 min, `/api/cron/recover` every 10 min,
-   `/api/cron/cleanup` daily at 03:00 UTC. When `CRON_SECRET` is set on the
-   project, Vercel sends `Authorization: Bearer $CRON_SECRET` with every cron
-   request, which is exactly what `requireCronSecret` checks.
+   deploy: `/api/cron/campaigns` at 14:00 UTC, `/api/cron/recover` at 02:00 UTC,
+   `/api/cron/cleanup` daily at 03:00 UTC. Vercel **Hobby** accounts are limited
+   to *once-per-day* cron schedules, which is why all three jobs use daily
+   expressions. Upgrade to Vercel **Pro** to enable sub-daily schedules
+   (e.g. every 5/10 min) and set `CRON_MAX_DURATION_SECS=300` to unlock the
+   5-minute function timeout for large campaign batches. When `CRON_SECRET` is
+   set on the project, Vercel sends `Authorization: Bearer $CRON_SECRET` with
+   every cron request, which is exactly what `requireCronSecret` checks.
 4. **Domains**: add the domain, keep the suggested DNS records. HSTS, CSP and
    the rest of the header set ship from `next.config.ts` — nothing to configure.
 
 ## 3. Railway (scraping worker)
 
-1. New service → **Deploy from repo**, root directory = repo root. Railway
-   reads `railway.toml`, which selects `Dockerfile.worker`, sets the
+1. New service → **Deploy from repo**. In the service **Settings**:
+   - **Root Directory** must be the **repo root** (empty or `/`). **Do NOT**
+     set it to `/scraper` — `Dockerfile.worker` copies both `scraper/` and
+     `src/` from the repo root, and the scraper imports shared modules from
+     `src/lib/*` via relative paths. A wrong root directory produces the build
+     error `"/scraper": not found`.
+   - **Builder**: leave it at the default (**Railpack** / **Nixpacks** is fine)
+     — Railway auto-detects `railway.toml` and switches to the Dockerfile
+     builder. If builds fail, explicitly set Builder → **Dockerfile** and
+     confirm Dockerfile path is `Dockerfile.worker`.
+   Railway reads `railway.toml`, which selects `Dockerfile.worker`, sets the
    healthcheck to `GET /health` (300 s timeout — the first boot installs
    nothing but does verify the engine) and restarts on failure.
 2. Service variables:
