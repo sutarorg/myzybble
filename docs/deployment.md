@@ -40,6 +40,21 @@ Rules that hold in every environment:
   effect when `NODE_ENV=development`) and never run in production.
 - Client never determines plan, quota, price or subscription status — the
   server does (see `docs/billing.md`).
+- **A malformed value never fails a build and never takes the deployment down.**
+  `src/lib/env.ts` trims whitespace, strips the quotes off a pasted
+  `KEY="value"` line, reads a blank variable as *unset* (a variable added to a
+  dashboard before its value is), and assumes `https://` for a bare hostname.
+  Anything left that it cannot use is reported in the build/deploy log with the
+  variable name and the fix, and that one variable is switched off — the rest of
+  the configuration keeps working, and `/settings/integrations` shows the
+  integration as *not configured*. Set `STRICT_ENV_VALIDATION=true` in a staging
+  or CI environment to make any unusable value a hard failure instead.
+
+  The one exception is `NEXT_PUBLIC_*`: Next.js inlines those into the browser
+  bundle at build time, so they cannot be switched off at runtime. `next.config.ts`
+  therefore settles them **at build time** — same normalisation, same checks — and
+  replaces an unusable value with an empty string, which the app reads as *not
+  configured* (§9.2). The build proceeds and the log says what to fix.
 
 ---
 
@@ -94,6 +109,23 @@ Rules that hold in every environment:
    | `CRON_SECRET` | Bearer token Vercel sends to `/api/cron/*` |
 
    The full list with commentary lives in `.env.example`. Nothing else is read.
+
+   Two things worth getting right the first time:
+
+   - **An environment variable with an empty value is still an environment
+     variable.** Adding `WORKER_BASE_URL` before you have the worker's domain,
+     and leaving the value blank, is fine now (a blank value counts as unset),
+     but the same mistake used to fail the build with
+     `Invalid server environment configuration: WORKER_BASE_URL: Invalid URL`.
+   - **`NEXT_PUBLIC_SUPABASE_URL` is the project URL**
+     (`https://<project-ref>.supabase.co`), not an API key. If a key ends up
+     there, the build log now names the mistake *and prints the URL the key
+     belongs to* (derived from the key's `ref` claim) — see §9.
+
+   Building passes with a partially configured project on purpose: a deployment
+   with three integrations wired up should deploy, then tell you what else is
+   missing, rather than refuse to build. Set `STRICT_ENV_VALIDATION=true` on a
+   staging or CI project to make any unusable value fail the build instead.
 3. **Cron jobs** come from `vercel.json` and are created automatically on
    deploy: `/api/cron/campaigns` at 14:00 UTC, `/api/cron/recover` at 02:00 UTC,
    `/api/cron/cleanup` daily at 03:00 UTC. Vercel **Hobby** accounts are limited
@@ -109,18 +141,25 @@ Rules that hold in every environment:
 ## 3. Railway (scraping worker)
 
 1. New service → **Deploy from repo**. In the service **Settings**:
-   - **Root Directory** must be the **repo root** (empty or `/`). **Do NOT**
-     set it to `/scraper` — `Dockerfile.worker` copies both `scraper/` and
-     `src/` from the repo root, and the scraper imports shared modules from
-     `src/lib/*` via relative paths. A wrong root directory produces the build
-     error `"/scraper": not found`.
-   - **Builder**: leave it at the default (**Railpack** / **Nixpacks** is fine)
-     — Railway auto-detects `railway.toml` and switches to the Dockerfile
-     builder. If builds fail, explicitly set Builder → **Dockerfile** and
-     confirm Dockerfile path is `Dockerfile.worker`.
-   Railway reads `railway.toml`, which selects `Dockerfile.worker`, sets the
-   healthcheck to `GET /health` (300 s timeout — the first boot installs
-   nothing but does verify the engine) and restarts on failure.
+
+   | Setting | Value | Why |
+   | --- | --- | --- |
+   | **Root Directory** | empty — the **repo root**. Never `/scraper` | Railway uses the root directory as the *build context*. `Dockerfile.worker` copies `scraper/`, `src/`, `package.json` and `tsconfig.json` from the repo root, and the scraper imports shared modules from `src/lib/*` via relative paths. With `/scraper` the context holds none of those and the build dies with `failed to compute cache key: … "/scraper": not found` |
+   | **Builder** | Dockerfile (Railway also auto-detects `railway.toml` when the service can use Config as Code) | selects the build below |
+   | **Dockerfile Path** | `/Dockerfile.worker` | the worker image, not the Next.js app |
+   | **Healthcheck Path** | `/health` | the worker only enters rotation once it can reach Supabase *and* exec the pinned engine. A blank healthcheck path means the deploy is declared live before that check |
+   | **Watch Paths** | optional, e.g. `Dockerfile.worker`, `/scraper/**`, `/src/**` | avoids rebuilding the worker for web-only changes |
+
+   `Dockerfile.worker` now verifies the context before it copies anything, so a
+   wrong Root Directory fails with `ERROR: build context is missing
+   'package.json'. … Root Directory must be the repository root` instead of the
+   cache-key error above.
+
+   > Railway is deprecating Config as Code: `railway.toml` (in this repo) only
+   > applies to services that adopted it before 28 Aug 2026. On a service
+   > created after that date, set the Dockerfile path and healthcheck path in
+   > the dashboard as in the table above — the values are the same ones the file
+   > records.
 2. Service variables:
 
    | Variable | Notes |
@@ -190,6 +229,7 @@ Rules that hold in every environment:
 - [ ] Signup → verify → login works on the production domain (check the email link lands on `/auth/confirm`).
 - [ ] Test-mode Razorpay checkout + webhook: subscription activates **only** via the webhook, never from the browser redirect.
 - [ ] `/api/webhooks/razorpay` and `/api/webhooks/resend` return 401 for a forged body (send one; check `billing_events` / `email_events` recorded it).
+- [ ] Railway service settings verified: **Root Directory** = the repo root (empty), Dockerfile Path = `/Dockerfile.worker`, Healthcheck Path = `/health` (§3).
 - [ ] Worker deployed; `/health` returns `engineReady: true`; a test search transitions queued → running → completed with real leads.
 - [ ] A campaign test send arrives, the open arrives via webhook, and the unsubscribe link suppresses the address.
 - [ ] Crons visible in the Vercel dashboard and succeeding (check the structured logs for `cron.campaigns` / `cron.recover` / `cron.cleanup`).
@@ -250,6 +290,13 @@ Everything else in this category is a *choice*, not a lookup:
    - Click the **Connect** button in the project's **top bar**; the dialog
      shows `https://<project-ref>.supabase.co` as the host. Or find it at
      **Settings → API Keys** next to the "Project URL" heading.
+   - **This is a URL, and the keys are not it.** Setting this variable to a
+     key (both keys start `eyJ…` on legacy projects) breaks every Supabase call.
+     The validation does the decoding for you: the build/deploy log will print
+     `NEXT_PUBLIC_SUPABASE_URL is an API key, not the project URL — the matching
+     URL is https://<project-ref>.supabase.co`, so the value to paste is in the
+     message. A bare `<project-ref>.supabase.co` is accepted and completed to
+     `https://` for you.
 3. **API keys** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`):
    - Left sidebar → **⚙ Project Settings** (gear icon, bottom) → **API Keys**.
      (There is no separate "Settings → API" page any more — this is the one
@@ -362,6 +409,10 @@ Everything else in this category is a *choice*, not a lookup:
    - Railway assigns something like
      `https://zybble-worker-production.up.railway.app` — that URL (with
      `https://`) is `WORKER_BASE_URL`.
+   - Use the **public** domain, not the private `myzybble.railway.internal`
+     name shown under Private Networking: `.railway.internal` only resolves from
+     inside Railway, and the web app runs on Vercel. Setting it produces a
+     warning in the Vercel logs naming that exact problem.
    - `WORKER_SHARED_SECRET` must hold the **same value on both Railway and
      Vercel** — it authenticates the web app's worker-health checks.
 
@@ -372,6 +423,7 @@ Everything else in this category is a *choice*, not a lookup:
 | `NEXT_PUBLIC_SITE_URL` | Your domain (Vercel → Settings → Domains, §8.1) | Vercel |
 | `NEXT_PUBLIC_DEV_MODE` | You (§8.0) — `false` in production | Vercel |
 | `CRON_SECRET` | You generate it (§8.0); Vercel's cron sends it automatically | Vercel |
+| `STRICT_ENV_VALIDATION` | Your choice (§0) — `true` turns an unusable value into a build failure instead of a warning | Vercel (staging/CI) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → top-bar **Connect** or Settings → API Keys (§8.2) | Vercel **+** Railway |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API Keys → legacy **anon** (§8.2) | Vercel **+** Railway* |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API Keys → legacy **service_role** (§8.2) | Vercel **+** Railway |
@@ -397,3 +449,130 @@ Everything else in this category is a *choice*, not a lookup:
 
 \* The worker talks to Supabase with the service-role key only; the anon key
 is harmless to set but not required on Railway.
+
+---
+
+## 9. Troubleshooting a failed deploy
+
+The exact messages, and what each one means. Every check below is cheap; run
+them in this order rather than guessing.
+
+### 9.1 Vercel — `Invalid server environment configuration: <VAR>: Invalid URL`
+
+```
+Error: Failed to collect configuration for /api/ai/chat
+  [cause]: Error: Invalid server environment configuration: WORKER_BASE_URL: Invalid URL
+      at module evaluation (src/lib/env.ts)
+```
+
+An environment variable holds something that is not a URL. In practice it is one
+of three things, all of them fixed by the normalisation in `src/lib/env.ts`:
+
+| Cause | Before | Now |
+| --- | --- | --- |
+| The variable exists in the dashboard with an **empty value** (added, value not pasted yet) | build failed | read as *unset* |
+| The value was pasted **with its quotes** — `WORKER_BASE_URL="https://…"` | build failed | quotes stripped |
+| The value is a **bare hostname** — `myzybble.up.railway.app` | build failed | `https://` assumed |
+
+Anything that still cannot be used no longer fails the build; it is reported
+instead, with the variable name:
+
+```
+[env] Ignoring unusable server environment values: WORKER_BASE_URL is not a
+usable URL — expected the worker's public domain, e.g.
+https://your-worker.up.railway.app (docs/deployment.md §8.6). The affected
+integrations are disabled, which /api/settings/integrations reports as not
+configured.
+```
+
+Set the variable (Vercel → Project → Settings → Environment Variables) and
+redeploy. To make any such value fail the build again — recommended on staging
+and in CI — set `STRICT_ENV_VALIDATION=true`.
+
+### 9.2 Vercel — `TypeError: Invalid URL` or `Failed to collect configuration`
+
+```
+Error: Failed to collect configuration for /_not-found
+  [cause]: TypeError: Invalid URL
+```
+
+A `NEXT_PUBLIC_*` value is unusable. These are inlined into the browser bundle
+at build time, so they cannot be switched off at runtime and they are settled in
+`next.config.ts` before the bundles are written:
+
+```
+[env] NEXT_PUBLIC_SUPABASE_URL is an API key, not the project URL — the matching
+URL is https://nrdhcxarlfnkslfbhcal.supabase.co (docs/deployment.md §8.2). The
+value is empty in the browser bundle, where the app treats it as not configured:
+the marketing site serves, the dashboard reports which variable to set, and
+/api/health reports the capability as off.
+```
+
+**Where to look:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+and `NEXT_PUBLIC_SITE_URL`, in each environment scope (§8.1, §8.2).
+
+**What the deployment does until it is fixed** — it deploys and serves, honestly:
+
+| Surface | Behaviour |
+| --- | --- |
+| Marketing pages | render normally |
+| `/dashboard`, other signed-in routes | redirect to `/auth/login?error=not_configured` |
+| `/api/health` | `200` with `status: degraded` and the affected capability `false` |
+| `/settings/integrations` | lists the variable to set, per integration |
+| Build log | names the variable, what is wrong with it, and the value to paste |
+
+A **service-role key in `NEXT_PUBLIC_SUPABASE_ANON_KEY`** is the one case that is
+reported but *not* neutralised: the browser needs a key there and the app cannot
+tell which one you meant. It is inlined into every visitor's bundle, so treat it
+as leaked — replace it with the anon/publishable key and rotate the service-role
+key (§8.2).
+
+### 9.3 Railway — `failed to compute cache key: … "/scraper": not found`
+
+```
+[runtime 7/12] COPY scraper ./scraper
+[err] Build Failed: build daemon returned an error < failed to solve: failed to
+compute cache key: … "/scraper": not found >
+```
+
+The service's **Root Directory** is `/scraper`, so Railway builds with that
+directory as the context — it contains no `package.json`, no `src/`, and no
+`Dockerfile.worker` inputs. Fix: **Settings → Root Directory → clear it** (the
+repo root), keep **Dockerfile Path** `/Dockerfile.worker`, and redeploy. The
+Dockerfile now fails fast with the same instruction if the context is wrong.
+
+### 9.4 Railway — `runc run failed: container process is already dead`
+
+```
+[err] [runtime 2/12] RUN apt-get update && apt-get install …
+[err] [engine 2/3] RUN go install github.com/gosom/google-maps-scraper@v1.18.1
+[inf] runc run failed: container process is already dead
+```
+
+This is a *cancellation*, not the fault. BuildKit stops every step still running
+in the other stages once one step fails, and the ones that get killed are stamped
+`[err]` on their way out. Read **upward** for the first failure — in the example
+log, §9.3's `COPY` — and fix that one.
+
+### 9.5 Railway — the deploy builds, then the healthcheck never passes
+
+Railway marks a deploy failed if `/health` does not answer `200` within the
+healthcheck timeout. The worker refuses to start with an unusable environment
+and says why (Railway → the service → **Deploy Logs**):
+
+```
+Worker environment is unusable: NEXT_PUBLIC_SUPABASE_URL is an API key, not the
+project URL — the matching URL is https://<project-ref>.supabase.co. Both values
+are on Supabase → Settings → API Keys (docs/deployment.md §8.2).
+```
+
+Set both Supabase variables on the worker service (§8.6) — they are the same
+two values the web app uses — and redeploy. Other reasons `/health` refuses:
+
+- `engineReady: false` — `google-maps-scraper -h` did not run; check
+  `PLAYWRIGHT_BROWSERS_PATH` and that the engine layer of `Dockerfile.worker`
+  was built (it is the slowest step).
+- `WORKER_DEV_MODE=true` in production — the engine is replaced by fixtures and
+  the health endpoint reports the worker as not ready for real work.
+- **Healthcheck Path** blank on the service — Railway then never calls
+  `/health` at all and you lose the gate entirely (§3).

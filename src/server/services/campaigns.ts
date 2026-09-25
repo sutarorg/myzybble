@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import type { CampaignRow, CampaignStepRow, CampaignLeadRow, MailboxRow } from "@/types/database";
+import { siteUrl } from "@/lib/env-public";
 
 /**
  * Campaign service (§22).
@@ -282,7 +283,6 @@ export async function sendDueCampaignSteps(limit = 50): Promise<{ sent: number; 
     const { sendEmail, unsubscribeFooter } = await import("@/server/services/email");
     const { renderTemplate } = await import("@/lib/personalization");
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const body = renderTemplate(step.body ?? "", {
       business_name: lead.business_name,
       first_name: lead.business_name.split(" ")[0],

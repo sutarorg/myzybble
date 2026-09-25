@@ -4,6 +4,7 @@ import { ZodError, type ZodType } from "zod";
 import { AppError, Errors, errorStatus, toErrorBody } from "@/lib/errors";
 import { logger, newRequestId, describeError } from "@/lib/logger";
 import { enforceRateLimit, type RateScope } from "@/server/rate-limit";
+import { siteUrl } from "@/lib/env-public";
 
 export const MAX_BODY_BYTES = 512 * 1024; // 512 KB request cap (§27)
 
@@ -169,7 +170,7 @@ export function enforceOrigin(request: NextRequest): void {
   if (!origin) return; // Non-browser client (webhook, curl).
   const host = request.headers.get("host");
   const allowed = new Set<string>([`https://${host}`, `http://${host}`]);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  // Normalised to an absolute origin, so a mistyped value cannot throw here.
   if (siteUrl) allowed.add(new URL(siteUrl).origin);
   if (process.env.NODE_ENV === "development") {
     allowed.add("http://localhost:3000");

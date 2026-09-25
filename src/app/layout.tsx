@@ -1,8 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { siteUrl } from "@/lib/env-public";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://zybble.app"),
+  /**
+   * Already normalised by `src/lib/env-public.ts`, so an unset or mistyped
+   * `NEXT_PUBLIC_SITE_URL` degrades to the canonical site instead of throwing
+   * `TypeError: Invalid URL` while metadata is being resolved at build time.
+   */
+  metadataBase: new URL(siteUrl || "https://zybble.app"),
   /**
    * Per-page titles are authored in full (e.g. "Pricing — zybble"), exactly as
    * they were in the original landing page, so no `%s` template is applied here
