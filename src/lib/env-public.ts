@@ -9,8 +9,10 @@
  *
  * These values are validated rather than dropped: Next.js inlines them into the
  * browser bundle at build time, so a broken one cannot be hidden from the
- * browser. The useful thing is to fail with a sentence that names the variable
- * and the fix — `new URL(undefined)` from inside `@supabase/ssr` is not.
+ * browser. `next.config.ts` settles that side of the problem before the bundles
+ * are written (an unusable value is replaced with an empty string, and the build
+ * log says why), so by the time this module runs the value is either usable or
+ * absent — and absence is a state the app answers for properly.
  */
 import {
   diagnoseSupabaseAnonKey,
@@ -52,7 +54,10 @@ export const publicEnv = {
  */
 export function supabaseConfigProblem(): string | null {
   if (!supabaseUrlRaw) {
-    return "Supabase is not configured: NEXT_PUBLIC_SUPABASE_URL is not set on this deployment (docs/deployment.md §8.2).";
+    return (
+      "Supabase is not configured: NEXT_PUBLIC_SUPABASE_URL is missing on this deployment, or was replaced " +
+      "with an empty value because it is not a URL (the build log says which; docs/deployment.md §9.2)."
+    );
   }
   const urlProblem = diagnoseSupabaseUrl(supabaseUrlRaw);
   if (urlProblem) {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   diagnoseSupabaseAnonKey,
   diagnoseSupabaseServiceKey,
@@ -205,5 +205,80 @@ describe("reportEnvProblems", () => {
     const log = vi.fn();
     reportEnvProblems([], [], { log });
     expect(log).not.toHaveBeenCalled();
+  });
+});
+
+describe("next.config.ts — values inlined into the browser bundle", () => {
+  /**
+   * `NEXT_PUBLIC_*` is inlined at build time, so a value the browser cannot use
+   * cannot be ignored at runtime: `next.config.ts` settles it before the bundles
+   * are written, and the build log says what was wrong. This is the failure that
+   * shipped from a Vercel **Preview** scope holding an API key in the
+   * project-URL variable — the server-side half of it was survivable, this half
+   * is not.
+   */
+  async function bundleEnv(env: Record<string, string>) {
+    vi.resetModules();
+    for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const config = await import("../../next.config");
+    const result = { env: { ...(config.default.env ?? {}) }, warnings: warn.mock.calls.flat().join(" ") };
+    warn.mockRestore();
+    return result;
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("empties the URL and names the right one when a key is pasted into it", async () => {
+    const { env, warnings } = await bundleEnv({ NEXT_PUBLIC_SUPABASE_URL: ANON_KEY });
+
+    expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+    expect(warnings).toContain("is an API key, not the project URL");
+    expect(warnings).toContain(`https://${REF}.supabase.co`);
+  });
+
+  it("empties a site URL that is not a URL", async () => {
+    const { env, warnings } = await bundleEnv({ NEXT_PUBLIC_SITE_URL: "zybble dot app" });
+
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe("");
+    expect(warnings).toContain("NEXT_PUBLIC_SITE_URL is not a usable URL");
+  });
+
+  it("passes usable values through, normalised", async () => {
+    const { env, warnings } = await bundleEnv({
+      NEXT_PUBLIC_SUPABASE_URL: `"${REF}.supabase.co"`,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: `  "${ANON_KEY}"  `,
+      NEXT_PUBLIC_SITE_URL: "https://zybble.app/",
+    });
+
+    expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe(`https://${REF}.supabase.co`);
+    expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(ANON_KEY);
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe("https://zybble.app");
+    expect(warnings).toBe("");
+  });
+
+  it("warns — but inlines, because the browser needs it — about a service-role key in the anon slot", async () => {
+    const { env, warnings } = await bundleEnv({
+      NEXT_PUBLIC_SUPABASE_URL: `https://${REF}.supabase.co`,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: SERVICE_KEY,
+    });
+
+    expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(SERVICE_KEY);
+    expect(warnings).toContain("inlined into the browser bundle");
+  });
+
+  it("never inlines a server-only secret", async () => {
+    const { env } = await bundleEnv({
+      SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY,
+      GEMINI_API_KEY: "AIza-not-a-real-key",
+      RAZORPAY_KEY_SECRET: "rzp_secret",
+      CRON_SECRET: "cron-secret",
+    });
+
+    expect(Object.keys(env).every((key) => key.startsWith("NEXT_PUBLIC_"))).toBe(true);
+    expect(JSON.stringify(env)).not.toContain(SERVICE_KEY);
   });
 });

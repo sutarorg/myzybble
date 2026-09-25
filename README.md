@@ -176,7 +176,7 @@ Every variable is documented in [`.env.example`](.env.example), grouped by provi
 
 `src/lib/env.ts` is marked `server-only`, so importing it from a Client Component is a build error rather than a runtime leak. Client Components read the public half from `src/lib/env-public.ts` (no secrets, safe in the browser and in middleware).
 
-Values are normalised before they are validated — whitespace trimmed, quotes off a pasted `KEY="value"` line stripped, a blank variable read as unset, a bare hostname completed to `https://`. A value that still cannot be used is reported in the deploy log with its variable name and the fix, and only the integration that needs it is switched off; set `STRICT_ENV_VALIDATION=true` to fail the build instead. See [docs/deployment.md](docs/deployment.md) §0 and §9.
+Values are normalised before they are validated — whitespace trimmed, quotes off a pasted `KEY="value"` line stripped, a blank variable read as unset, a bare hostname completed to `https://`. The `NEXT_PUBLIC_*` values are settled at build time in `next.config.ts` (they are inlined into the browser bundle), so an unusable one empties rather than failing the build. A value that still cannot be used is reported in the deploy log with its variable name and the fix, and only the integration that needs it is switched off; set `STRICT_ENV_VALIDATION=true` to fail the build instead. See [docs/deployment.md](docs/deployment.md) §0 and §9.
 
 ## Scripts
 

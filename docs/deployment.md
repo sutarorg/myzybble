@@ -51,9 +51,10 @@ Rules that hold in every environment:
   or CI environment to make any unusable value a hard failure instead.
 
   The one exception is `NEXT_PUBLIC_*`: Next.js inlines those into the browser
-  bundle at build time, so a broken one cannot be switched off at runtime —
-  those fail with the same explanatory message once the browser (or the
-  prerender) reaches them.
+  bundle at build time, so they cannot be switched off at runtime. `next.config.ts`
+  therefore settles them **at build time** — same normalisation, same checks — and
+  replaces an unusable value with an empty string, which the app reads as *not
+  configured* (§9.2). The build proceeds and the log says what to fix.
 
 ---
 
@@ -488,7 +489,7 @@ Set the variable (Vercel → Project → Settings → Environment Variables) and
 redeploy. To make any such value fail the build again — recommended on staging
 and in CI — set `STRICT_ENV_VALIDATION=true`.
 
-### 9.2 Vercel — `TypeError: Invalid URL` while collecting or prerendering
+### 9.2 Vercel — `TypeError: Invalid URL` or `Failed to collect configuration`
 
 ```
 Error: Failed to collect configuration for /_not-found
@@ -496,16 +497,35 @@ Error: Failed to collect configuration for /_not-found
 ```
 
 A `NEXT_PUBLIC_*` value is unusable. These are inlined into the browser bundle
-at build time, so they cannot be switched off at runtime — the build (or the
-browser) stops with a message naming the variable and the correct value:
+at build time, so they cannot be switched off at runtime and they are settled in
+`next.config.ts` before the bundles are written:
 
 ```
-Supabase is misconfigured: NEXT_PUBLIC_SUPABASE_URL is an API key, not the
-project URL — the matching URL is https://nrdhcxarlfnkslfbhcal.supabase.co
+[env] NEXT_PUBLIC_SUPABASE_URL is an API key, not the project URL — the matching
+URL is https://nrdhcxarlfnkslfbhcal.supabase.co (docs/deployment.md §8.2). The
+value is empty in the browser bundle, where the app treats it as not configured:
+the marketing site serves, the dashboard reports which variable to set, and
+/api/health reports the capability as off.
 ```
 
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
-`NEXT_PUBLIC_SITE_URL` are the three to check first (§8.1, §8.2).
+**Where to look:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+and `NEXT_PUBLIC_SITE_URL`, in each environment scope (§8.1, §8.2).
+
+**What the deployment does until it is fixed** — it deploys and serves, honestly:
+
+| Surface | Behaviour |
+| --- | --- |
+| Marketing pages | render normally |
+| `/dashboard`, other signed-in routes | redirect to `/auth/login?error=not_configured` |
+| `/api/health` | `200` with `status: degraded` and the affected capability `false` |
+| `/settings/integrations` | lists the variable to set, per integration |
+| Build log | names the variable, what is wrong with it, and the value to paste |
+
+A **service-role key in `NEXT_PUBLIC_SUPABASE_ANON_KEY`** is the one case that is
+reported but *not* neutralised: the browser needs a key there and the app cannot
+tell which one you meant. It is inlined into every visitor's bundle, so treat it
+as leaked — replace it with the anon/publishable key and rotate the service-role
+key (§8.2).
 
 ### 9.3 Railway — `failed to compute cache key: … "/scraper": not found`
 
