@@ -12,10 +12,22 @@ const trimmed = (min: number, max: number) => z.string().trim().min(min).max(max
 export const keywordSchema = trimmed(1, 120);
 export const locationSchema = trimmed(1, 160);
 
+/**
+ * Accepts either an array (the UI sends one row per keyword) or a
+ * comma/newline separated string. The AI Assistant's `create_search` tool and
+ * the re-run path both hand us free text, so parsing belongs here rather than
+ * at each call site.
+ */
+const tokenList = (max: number, message: string) =>
+  z.preprocess(
+    (value) => (Array.isArray(value) ? value : parseTokenList(value as string | null)),
+    z.array(z.string().trim().min(1).max(max)).min(1, message).max(20, `Up to ${message.toLowerCase()}`),
+  );
+
 export const searchInputSchema = z
   .object({
-    keywords: z.array(keywordSchema).min(1, "Add at least one keyword.").max(20, "Up to 20 keywords."),
-    locations: z.array(locationSchema).min(1, "Add at least one location.").max(20, "Up to 20 locations."),
+    keywords: tokenList(120, "Add at least one keyword."),
+    locations: tokenList(160, "Add at least one location."),
     radius: z.number().int().min(100).max(100_000).nullish(),
     requestedLimit: z.number().int().min(1).max(200_000).default(100),
     language: z.string().trim().min(2).max(12).default("en"),

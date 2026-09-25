@@ -81,7 +81,9 @@ const KNOWN_COUNTRY_CODES = new Set([
 export function splitPhones(input: string | null | undefined): string[] {
   if (!input) return [];
   return input
-    .split(/[,;]|\s+(?:or|ext\.?|x)\s+/i)
+    // Listings separate multiple numbers with , ; / | or the words
+    // "or" / "ext." / "x". A single number never contains any of these.
+    .split(/[,;/|]|\s+(?:or|ext\.?|x)\s+/i)
     .map((s) => s.trim())
     .filter((s) => digitsOnly(s).length >= 7)
     .slice(0, 5);

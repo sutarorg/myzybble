@@ -85,6 +85,7 @@ function extractSocialLinks(about: Record<string, string[]> | undefined): Record
       const domain = canonicalDomain(url);
       if (!domain) continue;
       const root = domain.split(".")[0];
+      if (!root) continue;
       const key = SOCIAL_HOSTS[root];
       if (key && !out[key]) out[key] = url;
     }
@@ -102,25 +103,30 @@ function parseAddress(
   const parts = source.split(",").map((p) => p.trim()).filter(Boolean);
   if (parts.length === 0) return { street: streetAddress, city: null, state: null, country: null, postalCode: null };
 
-  const country = parts.length > 1 ? parts[parts.length - 1] : null;
+  const country = parts.length > 1 ? parts[parts.length - 1] ?? null : null;
   // US-style: "…, City, ST 12345, Country"
-  const stateZip = parts.length > 2 ? parts[parts.length - 2] : null;
+  const stateZip = parts.length > 2 ? parts[parts.length - 2] ?? null : null;
   let state: string | null = null;
   let postalCode: string | null = null;
 
   if (stateZip) {
     const match = stateZip.match(/^([A-Za-z]{2})\s+(\S+)$/);
     if (match) {
-      state = match[1].toUpperCase();
-      postalCode = match[2];
+      state = match[1]?.toUpperCase() ?? null;
+      postalCode = match[2] ?? null;
     } else {
       const zipOnly = stateZip.match(/^(\d{4,6})$/);
-      if (zipOnly) postalCode = zipOnly[1];
+      if (zipOnly) postalCode = zipOnly[1] ?? null;
       else state = stateZip;
     }
   }
 
-  const city = parts.length > 3 ? parts[parts.length - 3] : parts.length > 1 ? parts[0] : null;
+  const city =
+    parts.length > 3
+      ? parts[parts.length - 3] ?? null
+      : parts.length > 1
+        ? parts[0] ?? null
+        : null;
 
   return {
     street: streetAddress,

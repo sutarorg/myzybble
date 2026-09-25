@@ -344,7 +344,7 @@ export async function sendDueCampaignSteps(limit = 50): Promise<{ sent: number; 
   return { sent, failed };
 }
 
-function backoff(attempts: number): number {
+export function backoff(attempts: number): number {
   return Math.min(60 * 60 * 1000, 2 ** attempts * 60 * 1000);
 }
 

@@ -43,10 +43,10 @@ export function generateFixturePlaces(keywords: string[], locations: string[], l
   const places: UpstreamPlace[] = [];
 
   for (let i = 0; i < count; i += 1) {
-    const geo = CITIES[Math.floor(random() * CITIES.length)];
-    const prefix = PREFIXES[Math.floor(random() * PREFIXES.length)];
-    const suffix = SUFFIXES[Math.floor(random() * SUFFIXES.length)];
-    const category = keywords[0] ?? CATEGORIES[Math.floor(random() * CATEGORIES.length)];
+    const geo = CITIES[Math.floor(random() * CITIES.length)] ?? CITIES[0]!;
+    const prefix = PREFIXES[Math.floor(random() * PREFIXES.length)] ?? "North";
+    const suffix = SUFFIXES[Math.floor(random() * SUFFIXES.length)] ?? "Dental";
+    const category = keywords[0] ?? CATEGORIES[Math.floor(random() * CATEGORIES.length)] ?? "Dentist";
     const name = `${prefix} ${suffix}`;
     const slug = `${prefix}-${suffix}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const hasWebsite = random() > 0.25;
@@ -58,7 +58,7 @@ export function generateFixturePlaces(keywords: string[], locations: string[], l
 
     // Deliberately includes some duplicate identities so the dedupe path is
     // exercised during development.
-    const duplicateOf = i > 0 && random() < 0.06 ? places[Math.floor(random() * i)] : null;
+    const duplicateOf = i > 0 && random() < 0.06 ? places[Math.floor(random() * i)] ?? null : null;
 
     const place: UpstreamPlace = {
       input_id: inputId,
