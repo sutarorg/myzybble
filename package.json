@@ -1,31 +1,44 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "zybble",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "worker:dev": "tsx scraper/src/index.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "worker:typecheck": "tsc --noEmit -p scraper/tsconfig.json"
   },
   "dependencies": {
+    "@google/genai": "2.24.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.1",
     "clsx": "2.1.1",
     "framer-motion": "^13.4.3",
     "lucide-react": "^1.48.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "react-router-dom": "^7.18.4",
-    "tailwind-merge": "3.4.0"
+    "next": "16.3.6",
+    "postgres": "3.4.9",
+    "razorpay": "2.9.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "resend": "6.29.0",
+    "tailwind-merge": "3.4.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.1.17",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.19.17",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.1",
-    "tailwindcss": "4.1.17",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.20.6",
     "typescript": "5.9.3",
-    "vite": "7.3.2",
-    "vite-plugin-singlefile": "2.3.0"
+    "vitest": "5.0.1"
   }
 }

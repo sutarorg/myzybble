@@ -1,6 +1,6 @@
-import heroImg from "../assets/blog/maps-lead-engine-hero.png";
-import enrichImg from "../assets/blog/maps-lead-engine-enrich.png";
-import outreachImg from "../assets/blog/maps-lead-engine-outreach.png";
+const heroImg = "/blog/maps-lead-engine-hero.png";
+const enrichImg = "/blog/maps-lead-engine-enrich.png";
+const outreachImg = "/blog/maps-lead-engine-outreach.png";
 
 export type Block =
   | { t: "p"; text: string }
