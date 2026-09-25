@@ -32,6 +32,17 @@ const serverSchema = z.object({
   // Worker / internal
   WORKER_API_KEY: z.string().optional(),
   WORKER_ID: z.string().optional(),
+  /** Browser-side base URL of the Railway worker (used for status polling). */
+  WORKER_BASE_URL: z.string().url().optional(),
+  /** Shared secret the worker presents on internal endpoints. */
+  WORKER_SHARED_SECRET: z.string().optional(),
+  // Email provider config
+  RESEND_VERIFIED_DOMAINS: z.string().optional(),
+  /**
+   * Key used to encrypt SMTP mailbox credentials at rest (AES-256-GCM).
+   * Must be at least 32 characters when set.
+   */
+  MAILBOX_ENCRYPTION_KEY: z.string().optional(),
   // App
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   CRON_SECRET: z.string().optional(),
@@ -64,6 +75,7 @@ export const capabilities = {
   razorpay: Boolean(serverEnv.RAZORPAY_KEY_ID && serverEnv.RAZORPAY_KEY_SECRET),
   resend: Boolean(serverEnv.RESEND_API_KEY),
   gemini: Boolean(serverEnv.GEMINI_API_KEY),
+  worker: Boolean(serverEnv.WORKER_BASE_URL && serverEnv.WORKER_SHARED_SECRET),
 } as const;
 
 export type Capabilities = typeof capabilities;

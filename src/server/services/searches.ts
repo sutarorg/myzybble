@@ -405,3 +405,52 @@ export function dedupeKeyForManual(input: {
     })?.key ?? fallbackDedupeKey({ businessName: input.businessName, city: input.city })
   );
 }
+
+/**
+ * Requeues jobs whose worker lease has expired and fails those that have
+ * exhausted their retries.
+ *
+ * Runs from the cron sweep (`/api/cron/recover`) and from the worker on boot.
+ * `requeue_orphaned_jobs()` does the work atomically: it selects expired leases
+ * with `FOR UPDATE SKIP LOCKED` so two concurrent sweeps can't both grab the
+ * same job.
+ */
+export async function requeueOrphanedJobs(limit = 100): Promise<string[]> {
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.rpc("requeue_orphaned_jobs", { p_limit: limit });
+  if (error) {
+    logger.error("searches.requeue_failed", {
+      event: "searches.requeue",
+      status: "error",
+      error_code: error.code,
+      error_message: error.message,
+    });
+    return [];
+  }
+
+  const ids = ((data ?? []) as string[]).filter(Boolean);
+  if (ids.length > 0) {
+    logger.info("searches.requeued", {
+      event: "searches.requeue",
+      status: "ok",
+      metadata: { count: ids.length },
+    });
+  }
+  return ids;
+}
+
+/**
+ * Fetches one job by id using service-role privileges, for internal callers
+ * (the worker's completion callback and the cron sweep). Callers must already
+ * have authenticated the request with the worker shared secret.
+ */
+export async function getJobInternal(jobId: string): Promise<ScrapeJobRow | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("scrape_jobs")
+    .select("*")
+    .eq("id", jobId)
+    .maybeSingle();
+  return (data as ScrapeJobRow | null) ?? null;
+}

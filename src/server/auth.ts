@@ -145,6 +145,27 @@ export function verifyWorkerToken(header: string | null): boolean {
   return timingSafeEqual(provided, secret);
 }
 
+/**
+ * Authorises a scheduled job. Vercel Cron sends
+ * `Authorization: Bearer $CRON_SECRET`; if the secret isn't configured we
+ * refuse rather than leaving the endpoint open.
+ *
+ * Cron routes are excluded from the session middleware (a scheduler has no
+ * session), so this is their only authentication.
+ */
+export function requireCronSecret(request: Request): void {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    throw new Error("CRON_SECRET is not configured, so scheduled jobs are disabled.");
+  }
+  const header = request.headers.get("authorization");
+  if (!header) throw new Error("Missing Authorization header.");
+  const provided = header.startsWith("Bearer ") ? header.slice(7) : header;
+  if (!timingSafeEqual(provided, secret)) {
+    throw new Error("Invalid cron credentials.");
+  }
+}
+
 export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let mismatch = 0;

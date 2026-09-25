@@ -471,6 +471,13 @@ export type AiMessageRow = {
   created_at: string;
 }
 
+export type NotificationPreferenceRow = {
+  user_id: string;
+  preferences: Json;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NotificationRow = {
   id: string;
   workspace_id: string;
@@ -682,9 +689,19 @@ type TablesDef = {
   audit_logs: { Row: AuditLogRow; Insert: Partial<AuditLogRow> & { action: string; entity_type: string }; Update: Partial<AuditLogRow> };
   exports: { Row: ExportRow; Insert: Partial<ExportRow> & { workspace_id: string }; Update: Partial<ExportRow> };
   rate_limit_buckets: { Row: RateLimitRow; Insert: Partial<RateLimitRow> & { scope: string; identifier: string; window_start: string }; Update: Partial<RateLimitRow> };
+  notification_preferences: {
+    Row: NotificationPreferenceRow;
+    Insert: Partial<NotificationPreferenceRow> & { user_id: string };
+    Update: Partial<NotificationPreferenceRow>;
+  };
 };
 
 type FunctionsDef = {
+  create_account_deletion_token: { Args: { p_user_id: string }; Returns: string };
+  consume_account_deletion_token: {
+    Args: { p_user_id: string; p_token: string };
+    Returns: boolean;
+  };
   period_start: { Args: { ts?: string }; Returns: string };
   period_end: { Args: { p_start: string }; Returns: string };
   record_usage: {
