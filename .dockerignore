@@ -1,0 +1,22 @@
+# Keep the worker image to sources + manifests only.
+.git
+.github
+.next
+node_modules
+coverage
+docs
+tests
+scripts
+supabase
+public
+
+*.md
+!scraper/PIN.md
+.env*
+!.env.example
+Dockerfile*
+docker-compose*
+railway.toml
+vercel.json
+middleware.ts
+next.config.ts
