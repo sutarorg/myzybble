@@ -1,6 +1,5 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import type { LeadFilters } from "@/lib/validation";

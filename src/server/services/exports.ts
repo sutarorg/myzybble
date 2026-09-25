@@ -5,7 +5,6 @@ import { Errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { csvLinesAsync, EXPORTABLE_COLUMNS } from "@/lib/csv";
 import { listLeads } from "@/server/services/leads";
-import { listListLeadIds } from "@/server/services/lists";
 import { recordUsage } from "@/server/services/usage";
 import type { ExportRow } from "@/types/database";
 
