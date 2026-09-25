@@ -208,7 +208,7 @@ The suites that need a live Supabase project **skip automatically** when their v
 Full runbooks live in [`docs/deployment.md`](docs/deployment.md). The short version:
 
 1. **Supabase** — create the project, apply migrations, configure auth redirect URLs.
-2. **Vercel** — import the repo, set the environment variables for each environment, deploy. Vercel Cron is configured by `vercel.json`.
+2. **Vercel** — import the repo, set the environment variables for each environment, deploy. Vercel Cron is configured by `vercel.json`, which also pins the **Next.js** framework preset (auto-detection can pick Vite, because `vitest` pulls `vite` into the tree, and then run `vite build`, which fails).
 3. **Railway** — deploy the worker from `scraper/Dockerfile`, set the worker variables, set `healthcheckPath` to `/health`.
 4. **Razorpay** — verify the domain, enable international payments, create plans, point the webhook at `/api/webhooks/razorpay`.
 5. **Resend** — verify your sending domain, create an API key, point delivery webhooks at `/api/webhooks/resend`.
