@@ -3,8 +3,7 @@ import { requireAuthContext } from "@/server/auth";
 import { getAutomation, listAutomationRuns } from "@/server/services/automations";
 import { listLists } from "@/server/services/lists";
 import { listCampaigns } from "@/server/services/campaigns";
-import { SectionTitle, Card, StatCard, Badge, EmptyState } from "@/components/app/primitives";
-import { AutomationForm } from "@/features/automations/AutomationBuilder";
+import { Card, StatCard, Badge, EmptyState } from "@/components/app/primitives";
 import AutomationActions from "@/features/automations/AutomationActions";
 import { Workflow, CheckCircle2, XCircle, Clock } from "lucide-react";
 

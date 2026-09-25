@@ -101,7 +101,7 @@ export default function Changelog() {
         tag="Changelog"
         title={
           <>
-            What's <Mark>new</Mark> on the map
+            What&apos;s <Mark>new</Mark> on the map
           </>
         }
         sub="We ship weekly. Here's every release, improvement, and fix — newest first."

@@ -65,7 +65,11 @@ export default function AssistantChat({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const confirmed = useRef<Set<string>>(new Set());
+  // Double-click guard for pending-action buttons. State rather than a ref:
+  // the buttons read it during render, and refs must not be read there.
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  // Monotonic client-side id source for optimistic user messages.
+  const localId = useRef(0);
 
   useEffect(() => {
     if (!initialConversationId) return;
@@ -110,7 +114,7 @@ export default function AssistantChat({
     setError(null);
 
     const userMessage: ChatMessage = {
-      id: `u-${Date.now()}`,
+      id: `u-${++localId.current}`,
       role: "user",
       content: message,
     };
@@ -146,8 +150,8 @@ export default function AssistantChat({
   }
 
   function confirmAction(action: PendingAction) {
-    if (confirmed.current.has(action.id)) return;
-    confirmed.current.add(action.id);
+    if (confirmed.has(action.id)) return;
+    setConfirmed((prev) => new Set(prev).add(action.id));
     start(async () => {
       const res = await fetch("/api/ai/confirm", {
         method: "POST",
@@ -246,10 +250,10 @@ export default function AssistantChat({
                           </div>
                           <Button
                             variant="lime"
-                            disabled={pending || confirmed.current.has(action.id)}
+                            disabled={pending || confirmed.has(action.id)}
                             onClick={() => confirmAction(action)}
                           >
-                            {confirmed.current.has(action.id) ? "Running…" : "Run it"}
+                            {confirmed.has(action.id) ? "Running…" : "Run it"}
                           </Button>
                         </div>
                       </div>

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireAuthContext } from "@/server/auth";
 import { listMailboxes } from "@/server/services/campaigns";
 import { listCampaigns } from "@/server/services/campaigns";
-import { SectionTitle, Card, StatCard, StatusBadge, Badge } from "@/components/app/primitives";
+import { Card, StatCard, StatusBadge, Badge } from "@/components/app/primitives";
 import { Mailbox as MailboxIcon, Send, Megaphone, CalendarDays } from "lucide-react";
 import Link from "next/link";
 

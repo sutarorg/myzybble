@@ -13,7 +13,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Button, Input, Textarea, Select, Badge } from "@/components/app/primitives";
 import { PERSONALIZATION_VARIABLES } from "@/lib/personalization";
-import { Mail, Clock, GitBranch, Plus, Trash2, Save, GripVertical } from "lucide-react";
+import { Mail, Clock, GitBranch, Trash2, Save, GripVertical } from "lucide-react";
 
 export interface CampaignStep {
   id?: string;

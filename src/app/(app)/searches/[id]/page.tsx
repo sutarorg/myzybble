@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuthContext } from "@/server/auth";
-import { getSearch, getJob, listJobs } from "@/server/services/searches";
+import { getSearch, getJob } from "@/server/services/searches";
 import JobProgressPanel from "@/features/searches/JobProgressPanel";
-import { Card, CardHeader, LinkButton, EmptyState } from "@/components/app/primitives";
+import { Card, CardHeader, EmptyState } from "@/components/app/primitives";
 import { RotateCcw } from "lucide-react";
 import RerunSearchButton from "@/features/searches/RerunSearchButton";
 

@@ -11,7 +11,7 @@ import { Errors } from "@/lib/errors";
  * way Stripe does, so we return the subscription short URL (when present) and
  * let the UI link the customer to the invoice list on our own billing page.
  */
-export const GET = withRoute("GET /api/billing/portal", async (request: NextRequest) => {
+export const GET = withRoute("GET /api/billing/portal", async (_request: NextRequest) => {
   const auth = await requireAuthContext();
   await requireRateLimit("billing:action", `${auth.workspaceId}:${auth.user.id}`);
 

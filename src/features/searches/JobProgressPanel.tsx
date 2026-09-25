@@ -39,6 +39,25 @@ export default function JobProgressPanel({
 
   const isTerminal = TERMINAL.includes(job.status);
 
+  // Elapsed-time clock for the duration row. Render stays pure: `nowMs` is
+  // state, ticked once a second only while the job is still running.
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (job.completed_at || !job.started_at) return;
+    const tick = setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => clearInterval(tick);
+  }, [job.completed_at, job.started_at]);
+  const elapsedSeconds = job.started_at
+    ? Math.max(
+        0,
+        Math.round(
+          ((job.completed_at ? Date.parse(job.completed_at) : (nowMs ?? Date.parse(job.started_at))) -
+            Date.parse(job.started_at)) /
+            1000,
+        ),
+      )
+    : null;
+
   /** Always re-read authoritative state from Postgres (§15). */
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/jobs/${job.id}`, { cache: "no-store" });
@@ -82,11 +101,13 @@ export default function JobProgressPanel({
     }
 
     void connect();
-    // Confirm current state on mount regardless of realtime.
-    void refresh();
+    // Confirm current state on mount regardless of realtime. Deferred to a
+    // timeout: the effect body itself performs no synchronous state updates.
+    const initialRefresh = setTimeout(() => void refresh(), 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(initialRefresh);
       if (poll) clearInterval(poll);
       const channel = channelRef.current;
       if (channel) {
@@ -267,14 +288,7 @@ export default function JobProgressPanel({
           />
           <Row label="Business status" value={job.business_status ?? "all"} />
           <Row label="Engine" value={`${job.engine}${job.engine_version ? ` @ ${job.engine_version}` : ""}`} />
-          <Row
-            label="Duration"
-            value={
-              job.started_at
-                ? `${Math.max(0, Math.round(((job.completed_at ? Date.parse(job.completed_at) : Date.now()) - Date.parse(job.started_at)) / 1000))}s`
-                : "—"
-            }
-          />
+          <Row label="Duration" value={elapsedSeconds !== null ? `${elapsedSeconds}s` : "—"} />
           <Row label="Attempts" value={`${job.attempts} / ${job.max_attempts}`} />
           <Row label="Errors" value={String(job.errors)} />
         </dl>

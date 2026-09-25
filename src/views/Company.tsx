@@ -63,13 +63,13 @@ export default function Company() {
                 <div className="space-y-5 text-[15.5px] leading-relaxed text-ink/70">
                   <p>
                     Jonas ran a growth agency. Amara built data pipelines. One Friday, a client asked for
-                    "every HVAC company in the Carolinas" — and the honest answer was a VA, a spreadsheet,
+                    &quot;every HVAC company in the Carolinas&quot; — and the honest answer was a VA, a spreadsheet,
                     and two weeks. That weekend, the first zybble crawler was born: a scrappy script that
                     read the map like a local and pulled structured records out of it.
                   </p>
                   <p>
                     The script worked embarrassing­ly well. Friends in sales wanted in. Then their teams.
-                    The pattern was obvious: businesses already maintain the world's best business database
+                    The pattern was obvious: businesses already maintain the world&apos;s best business database
                     themselves — their own listings — and everyone was copying it by hand.
                   </p>
                 </div>
@@ -77,12 +77,12 @@ export default function Company() {
                   <p>
                     Today zybble indexes 12M+ businesses, verifies contact data in real time, writes
                     outreach with AI that references real reviews, and runs campaigns for thousands of
-                    teams — from two-person agencies to national sales orgs. The mission hasn't moved an
+                    teams — from two-person agencies to national sales orgs. The mission hasn&apos;t moved an
                     inch: <span className="font-semibold text-ink">make world-class prospecting feel unfair to everyone else.</span>
                   </p>
                   <p className="rounded-2xl bg-ink p-5 font-mono text-sm text-lime">
-                    "The freshest business database on earth is maintained by the businesses themselves.
-                    We just made it queryable." — Jonas, CEO
+                    &quot;The freshest business database on earth is maintained by the businesses themselves.
+                    We just made it queryable.&quot; — Jonas, CEO
                   </p>
                 </div>
               </div>
@@ -137,7 +137,7 @@ export default function Company() {
               <h2 className="mt-4 font-display text-4xl font-bold tracking-[-0.02em] sm:text-5xl">24 people, 9 countries, 1 map</h2>
             </div>
             <Link to="/careers" className="group flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3 text-sm font-semibold transition-colors hover:border-ink/40">
-              We're hiring
+              We&apos;re hiring
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </Reveal>

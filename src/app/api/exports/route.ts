@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { withRoute, json, readJson } from "@/server/api";
 import { requireAuthContext } from "@/server/auth";
 import { requireRateLimit } from "@/server/rate-limit";
@@ -40,7 +39,7 @@ export const POST = withRoute("POST /api/exports", async (request: NextRequest, 
 });
 
 /** GET /api/exports — recent exports for this workspace. */
-export const GET = withRoute("GET /api/exports", async (request, ctx) => {
+export const GET = withRoute("GET /api/exports", async (request, _ctx) => {
   const auth = await requireAuthContext();
   const limit = Math.min(50, Number(new URL(request.url).searchParams.get("limit") ?? 20));
   const exports = await listExports(auth.workspaceId, limit);

@@ -122,7 +122,7 @@ export const POST = withRoute("POST /api/leads", async (request: NextRequest, ct
 });
 
 /** GET /api/leads?facets=1 — filter dropdown values. */
-export const OPTIONS = withRoute("OPTIONS /api/leads", async (request, ctx) => {
+export const OPTIONS = withRoute("OPTIONS /api/leads", async (request, _ctx) => {
   const auth = await requireAuthContext();
   if (new URL(request.url).searchParams.get("facets") !== "1") {
     return json({});

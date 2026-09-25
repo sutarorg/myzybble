@@ -5,7 +5,7 @@ import { listLists, createList } from "@/server/services/lists";
 import { recordAudit } from "@/server/services/audit";
 import { listInputSchema } from "@/lib/validation";
 
-export const GET = withRoute("GET /api/lists", async (_request, ctx) => {
+export const GET = withRoute("GET /api/lists", async (_request, _ctx) => {
   const auth = await requireAuthContext();
   const lists = await listLists(auth.workspaceId);
   return json({ lists });

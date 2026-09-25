@@ -144,7 +144,7 @@ export default function Careers() {
           <Reveal className="mt-10">
             <div className="flex flex-col items-center justify-between gap-4 rounded-3xl bg-ink p-7 text-paper sm:flex-row sm:p-8">
               <div>
-                <h3 className="font-display text-xl font-bold tracking-tight">Don't see your role?</h3>
+                <h3 className="font-display text-xl font-bold tracking-tight">Don&apos;t see your role?</h3>
                 <p className="mt-1.5 text-sm text-paper/60">
                   If you can move the needle on pipeline — yours and ours — we want the email anyway.
                 </p>

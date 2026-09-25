@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAuthContext } from "@/server/auth";
 import { listLists } from "@/server/services/lists";
-import { SectionTitle, Card, EmptyState, Badge, LinkButton } from "@/components/app/primitives";
-import { FolderOpen, Plus, ArrowRight } from "lucide-react";
+import { SectionTitle, EmptyState, Badge } from "@/components/app/primitives";
+import { FolderOpen, ArrowRight } from "lucide-react";
 import CreateListButton from "@/features/lists/CreateListButton";
 
 export const metadata = { title: "Lists" };

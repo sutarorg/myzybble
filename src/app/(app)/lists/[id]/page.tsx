@@ -5,7 +5,6 @@ import { getList, listListLeadIds } from "@/server/services/lists";
 import { listLeads } from "@/server/services/leads";
 import ListMembers from "@/features/lists/ListMembers";
 import { Badge, LinkButton } from "@/components/app/primitives";
-import { Pencil, Trash2 } from "lucide-react";
 import ListActions from "@/features/lists/ListActions";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {

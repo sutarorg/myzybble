@@ -57,7 +57,7 @@ export const POST = withRoute("POST /api/searches", async (request: NextRequest,
 });
 
 /** GET /api/searches — list search history. */
-export const GET = withRoute("GET /api/searches", async (request, ctx) => {
+export const GET = withRoute("GET /api/searches", async (request, _ctx) => {
   const auth = await requireAuthContext();
   const url = new URL(request.url);
   const limit = Math.min(100, Number(url.searchParams.get("limit") ?? 25));

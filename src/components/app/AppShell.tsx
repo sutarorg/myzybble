@@ -79,10 +79,15 @@ export default function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
+  // Close transient menus when the route changes. Done during render, guarded
+  // by the previous pathname — the pattern the React docs recommend over a
+  // setState-in-effect (which would cascade an extra render per navigation).
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setMobileOpen(false);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
