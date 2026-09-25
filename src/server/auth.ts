@@ -134,18 +134,6 @@ export async function requireAdminContext(workspaceId?: string): Promise<AuthCon
 }
 
 /**
- * Verifies an internal service token (Railway worker → Vercel route).
- * Uses a constant-time comparison so timing doesn't leak the secret.
- */
-export function verifyWorkerToken(header: string | null): boolean {
-  const secret = process.env.WORKER_API_KEY;
-  if (!secret) return false;
-  if (!header) return false;
-  const provided = header.startsWith("Bearer ") ? header.slice(7) : header;
-  return timingSafeEqual(provided, secret);
-}
-
-/**
  * Authorises a scheduled job. Vercel Cron sends
  * `Authorization: Bearer $CRON_SECRET`; if the secret isn't configured we
  * refuse rather than leaving the endpoint open.

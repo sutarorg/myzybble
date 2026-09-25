@@ -30,7 +30,6 @@ const serverSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-3.8-flash"),
   // Worker / internal
-  WORKER_API_KEY: z.string().optional(),
   WORKER_ID: z.string().optional(),
   /** Browser-side base URL of the Railway worker (used for status polling). */
   WORKER_BASE_URL: z.string().url().optional(),
@@ -46,7 +45,6 @@ const serverSchema = z.object({
   // App
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   CRON_SECRET: z.string().optional(),
-  ENCRYPTION_KEY: z.string().optional(),
 });
 
 const parsed = serverSchema.safeParse(process.env);

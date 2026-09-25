@@ -52,3 +52,7 @@ scraper/results/
 
 # playwright browsers
 ms-playwright/
+
+# typescript incremental build cache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
