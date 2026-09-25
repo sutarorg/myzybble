@@ -174,7 +174,9 @@ Every variable is documented in [`.env.example`](.env.example), grouped by provi
 
 `SUPABASE_SERVICE_ROLE_KEY` · `RAZORPAY_KEY_SECRET` · `RAZORPAY_WEBHOOK_SECRET` · `GEMINI_API_KEY` · `RESEND_API_KEY` · `RESEND_WEBHOOK_SECRET` · `SUPABASE_DB_URL` · `CRON_SECRET` · `WORKER_SHARED_SECRET` · `MAILBOX_ENCRYPTION_KEY` · SMTP passwords
 
-`src/lib/env.ts` is marked `server-only`, so importing it from a Client Component is a build error rather than a runtime leak.
+`src/lib/env.ts` is marked `server-only`, so importing it from a Client Component is a build error rather than a runtime leak. Client Components read the public half from `src/lib/env-public.ts` (no secrets, safe in the browser and in middleware).
+
+Values are normalised before they are validated — whitespace trimmed, quotes off a pasted `KEY="value"` line stripped, a blank variable read as unset, a bare hostname completed to `https://`. A value that still cannot be used is reported in the deploy log with its variable name and the fix, and only the integration that needs it is switched off; set `STRICT_ENV_VALIDATION=true` to fail the build instead. See [docs/deployment.md](docs/deployment.md) §0 and §9.
 
 ## Scripts
 

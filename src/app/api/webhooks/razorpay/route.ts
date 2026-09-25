@@ -30,6 +30,7 @@ import {
 import { recomputeEntitlements } from "@/server/services/usage";
 import { sendPaymentSucceededEmail, sendPaymentFailedEmail, sendSubscriptionChangedEmail } from "@/server/services/email";
 import { logger } from "@/lib/logger";
+import { siteUrl } from "@/lib/env-public";
 
 // Razorpay posts a few KB; 256 KB is generous and still bounded.
 export const runtime = "nodejs";
@@ -323,7 +324,7 @@ async function notifyPayment(subscriptionId: string, paymentId: string | null): 
     email: resolved.email,
     planName: resolved.planName,
     amount: "your subscription",
-    invoiceUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/billing`,
+    invoiceUrl: `${siteUrl}/billing`,
     paymentId: paymentId ?? subscriptionId,
   });
 

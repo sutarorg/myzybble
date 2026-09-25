@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { supabaseConfigProblem } from "@/lib/env-public";
 
 /** Routes that require an authenticated session. */
 const PROTECTED_PREFIXES = [
@@ -30,12 +31,25 @@ function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * Reported once per instance rather than per request: a misconfigured project
+ * URL used to reach `createServerClient()` and fail with `TypeError: Invalid
+ * URL` on every single request, which is a hard failure to read in the logs.
+ */
+let reportedConfigProblem = false;
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // If Supabase isn't configured yet, let the marketing site render normally and
-  // let protected pages surface a clear configuration error.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  // If Supabase isn't configured — or is configured with a value that cannot
+  // work, e.g. an API key where the project URL belongs — let the marketing site
+  // render normally and let protected pages surface a clear configuration error.
+  const configProblem = supabaseConfigProblem();
+  if (configProblem) {
+    if (!reportedConfigProblem) {
+      reportedConfigProblem = true;
+      console.warn(`[env] ${configProblem} Signed-in areas are disabled until it is fixed.`);
+    }
     if (isProtected(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";

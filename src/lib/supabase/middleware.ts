@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
+import { publicEnv, supabaseConfigProblem } from "@/lib/env-public";
 
 /**
  * Refreshes the Supabase session on every request and writes rotated cookies
@@ -11,11 +12,14 @@ import type { Database } from "@/types/database";
  * keys, whereas `getSession()` only reads the cookie.
  */
 export async function updateSession(request: NextRequest) {
+  const problem = supabaseConfigProblem();
+  if (problem) throw new Error(problem);
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    publicEnv.supabaseUrl,
+    publicEnv.supabaseAnonKey,
     {
       cookies: {
         getAll() {

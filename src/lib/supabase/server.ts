@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
+import { publicEnv, supabaseConfigProblem } from "@/lib/env-public";
 
 /**
  * Request-scoped Supabase client for Server Components, Server Actions and
@@ -12,11 +13,16 @@ import type { Database } from "@/types/database";
  * owns session refresh, and Server Components may not set cookies.
  */
 export async function createClient() {
+  // `cookies()` is called before anything else on purpose: it is what marks the
+  // calling route as dynamic, and a session-scoped client is never prerenderable.
   const cookieStore = await cookies();
 
+  const problem = supabaseConfigProblem();
+  if (problem) throw new Error(problem);
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    publicEnv.supabaseUrl,
+    publicEnv.supabaseAnonKey,
     {
       cookies: {
         getAll() {

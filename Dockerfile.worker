@@ -85,6 +85,21 @@ COPY --from=engine /opt/ms-playwright /opt/ms-playwright
 # src/types, so the whole repo source is copied (node_modules etc. are kept
 # out by .dockerignore).
 WORKDIR /app
+
+# Guardrail. Railway builds with the service's **Root Directory** as the build
+# context, so pointing it at `/scraper` produces a context that holds neither
+# `package.json` nor `src/` and the COPY instructions below fail with the
+# famously unhelpful `failed to compute cache key: "/scraper": not found`.
+# Fail here instead, with the setting that needs changing.
+RUN for path in package.json package-lock.json scraper/src/index.ts src/lib/logger.ts tsconfig.json; do \
+      test -e "$path" || { \
+        echo "ERROR: build context is missing '$path'."; \
+        echo "Railway → this service → Settings → Root Directory must be the repository root (empty or /), NOT /scraper."; \
+        echo "Dockerfile Path stays /Dockerfile.worker. See docs/deployment.md §3."; \
+        exit 1; \
+      }; \
+    done
+
 COPY package.json package-lock.json ./
 COPY scraper ./scraper
 COPY src ./src
