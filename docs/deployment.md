@@ -75,6 +75,13 @@ Rules that hold in every environment:
 
 1. Import the repository; framework preset **Next.js** (build `next build`,
    output is auto-detected). Root directory: repo root.
+   The preset is pinned in `vercel.json` (`"framework": "nextjs"`,
+   `"buildCommand": "next build"`), which overrides both auto-detection and the
+   dashboard setting. That pin is load-bearing: `vitest` pulls `vite` into the
+   dependency tree, and when Vercel auto-detects the **Vite** preset instead it
+   runs `vite build`, which fails instantly with
+   `Could not resolve entry module "index.html"` — there is no Vite app in this
+   repo. `tests/unit/vercel-config.test.ts` guards the pin.
 2. Set environment variables per environment (Production / Preview):
 
    | Variable | Notes |
