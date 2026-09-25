@@ -36,6 +36,12 @@ export interface SendOptions {
   subject: string;
   html: string;
   text?: string;
+  /**
+   * Overrides the sender identity. Campaign mail must send from the mailbox
+   * the campaign is bound to (that's what mailbox verification verifies);
+   * transactional mail omits this and uses EMAIL_FROM.
+   */
+  from?: string;
   replyTo?: string;
   tags?: { name: string; value: string }[];
   /**
@@ -69,7 +75,7 @@ export async function sendEmail(options: SendOptions): Promise<SendResult> {
   try {
     const { data, error } = await resend().emails.send(
       {
-        from: serverEnv.EMAIL_FROM,
+        from: options.from ?? serverEnv.EMAIL_FROM,
         to: Array.isArray(options.to) ? options.to : [options.to],
         subject: options.subject,
         html: options.html,

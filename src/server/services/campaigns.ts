@@ -296,6 +296,9 @@ export async function sendDueCampaignSteps(limit = 50): Promise<{ sent: number; 
       to: row.email,
       subject: renderTemplate(step.subject ?? "", { business_name: lead.business_name }),
       html: `<div style="font-family:Inter,sans-serif;white-space:pre-wrap;">${escapeHtml(body)}</div>`,
+      // Campaign mail goes out under the mailbox the campaign is bound to —
+      // that is exactly the address mailbox verification verifies.
+      from: from,
       // Same key as the DB idempotency_key: retries cannot double-send.
       idempotencyKey: `campaign:${campaign.id}:lead:${row.lead_id}:step:${row.current_step}`,
       tags: [
