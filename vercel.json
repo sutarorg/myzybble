@@ -3,11 +3,11 @@
   "crons": [
     {
       "path": "/api/cron/campaigns",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/cron/recover",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/cleanup",
