@@ -14,6 +14,10 @@ Vercel deploys the Next.js app from the repo root (it ignores
 `Dockerfile.worker`. The only channel between them is the Supabase database —
 the worker polls the `scrape_jobs` queue; it has no inbound scraping endpoint.
 
+> **Just here for the env vars?** Section 8 is a click-by-click appendix —
+> verified 25 Sept 2026 — showing exactly where in each provider's dashboard
+> every value in `.env.example` comes from, with a master table at §8.7.
+
 ---
 
 ## 0. Environments
@@ -45,8 +49,8 @@ Rules that hold in every environment:
    production if you accept preview running against it).
 2. **Apply migrations** from your machine:
    ```
-   # connection string: Project settings → Database → Connection string
-   # (session pooler URI). Put it in .env.local as SUPABASE_DB_URL.
+   # connection string: the "Connect" button in the project's top bar →
+   # Session pooler (port 5432). Put it in .env.local as SUPABASE_DB_URL.
    npm run db:migrate            # applies supabase/migrations/*.sql in order
    npm run db:migrate -- --status  # inspect without applying
    ```
@@ -61,8 +65,11 @@ Rules that hold in every environment:
    - Email verification: enable "Confirm email". The templates should link to
      `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` —
      `/auth/confirm` exchanges the hash via `verifyOtp` and redirects.
-4. **Keys** (Settings → API): copy the anon key (public) and the service-role
-   key (server env only — it bypasses RLS).
+4. **Keys** (Settings → API Keys): copy the legacy anon key (public) and the
+   legacy service-role key (server env only — it bypasses RLS). There is no
+   separate "Settings → API" page any more — everything is under **Settings →
+   API Keys**. Click-by-click in §8.2, including the new
+   `sb_publishable_`/`sb_secret_` key system and the end-2026 legacy deprecation.
 
 ## 2. Vercel (web app + API + cron)
 
@@ -174,3 +181,206 @@ Rules that hold in every environment:
 - [ ] A campaign test send arrives, the open arrives via webhook, and the unsubscribe link suppresses the address.
 - [ ] Crons visible in the Vercel dashboard and succeeding (check the structured logs for `cron.campaigns` / `cron.recover` / `cron.cleanup`).
 - [ ] Security headers present (`curl -I https://<your-domain>` → CSP, HSTS, `X-Frame-Options: DENY`).
+
+---
+
+## 8. Appendix: click-by-click — where every `.env` value comes from
+
+> **Navigation verified against the provider dashboards' official docs on
+> 25 September 2026.** Each subsection below names the exact menu labels as of
+> that date and the variable(s) it fills. If a provider renames something, the
+> "you're looking for" description still applies. Copy each value into
+> `.env.local` (development) and the Vercel/Railway dashboards (deployments).
+
+### 8.0 Values you generate yourself (no dashboard involved)
+
+Open a terminal and run each of these; paste the output into the named
+variable. Generate **separate values per environment** (never reuse the
+staging secret in production):
+
+```bash
+openssl rand -hex 32   # → CRON_SECRET          (Vercel)
+openssl rand -hex 32   # → WORKER_SHARED_SECRET (Railway + Vercel, same value)
+openssl rand -hex 32   # → MAILBOX_ENCRYPTION_KEY (Vercel; ≥32 chars required)
+```
+
+Everything else in this category is a *choice*, not a lookup:
+
+| Variable | You decide |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Your canonical origin — `http://localhost:3000` locally, `https://<your-domain>` in production (from Vercel → Settings → Domains, §8.1) |
+| `NEXT_PUBLIC_DEV_MODE` | `false` everywhere except local fixture work |
+| `EMAIL_FROM` / `EMAIL_REPLY_TO` | An address **on your Resend-verified domain** (§8.4), e.g. `zybble <hello@yourdomain.com>` |
+| `RESEND_VERIFIED_DOMAINS` | The same domain(s), comma-separated |
+| `GEMINI_MODEL` | Leave the default `gemini-3.8-flash` unless you've decided otherwise |
+| `WORKER_ID` | Leave unset on Railway (it uses `RAILWAY_REPLICA_ID` automatically) |
+| `SCRAPER_*`, `WORKER_POLL_INTERVAL_MS`, `WORKER_HEARTBEAT_INTERVAL_MS`, `WORKER_LEASE_SECONDS`, `WORKER_RECOVERY_INTERVAL_MS`, `WORKER_MAX_JOB_RUNTIME_MS`, `WORKER_DRAIN_TIMEOUT_MS`, `WORKER_WORKDIR`, `PORT`, `SCRAPER_BIN`, `PLAYWRIGHT_BROWSERS_PATH`, `WORKER_DEV_MODE` | Tuning knobs with sane defaults — see `.env.example` and `docs/scraper.md`. Set `WORKER_DEV_MODE=false` (or unset) in production |
+
+### 8.1 Vercel — where to paste the web app's values
+
+1. Go to **vercel.com** → sign in → click your **zybble** project card.
+2. **Project → Settings → Environment Variables**.
+3. For each variable: paste the **Key**, paste the **Value**, tick the
+   environments it applies to (**Production** / **Preview** / **Development**),
+   click **Save**. Repeat for every variable marked "Vercel" in the master
+   table (§8.7).
+4. Your production URL: **Project → Settings → Domains** — the domain shown
+   there (e.g. `zybble.vercel.app` or your custom domain) is the value for
+   `NEXT_PUBLIC_SITE_URL` (with `https://`).
+5. Variable changes don't apply to already-running deployments — after the
+   last Save, go to **Project → Deployments → ⋯ on the latest → Redeploy**.
+
+### 8.2 Supabase — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`
+
+1. Go to **supabase.com/dashboard** → sign in → click your project's card.
+2. **Project URL** (`NEXT_PUBLIC_SUPABASE_URL`):
+   - Click the **Connect** button in the project's **top bar**; the dialog
+     shows `https://<project-ref>.supabase.co` as the host. Or find it at
+     **Settings → API Keys** next to the "Project URL" heading.
+3. **API keys** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`):
+   - Left sidebar → **⚙ Project Settings** (gear icon, bottom) → **API Keys**.
+     (There is no separate "Settings → API" page any more — this is the one
+     place all keys live, legacy or not.)
+   - **Important, as of 25 Sept 2026:** Supabase is deprecating the legacy
+     `anon`/`service_role` JWT keys **by the end of 2026** in favour of
+     `sb_publishable_…` / `sb_secret_…` keys. Both systems work side by side,
+     and zybble's variable names match the **legacy** keys, so:
+     1. On the **API Keys** page, open the legacy keys section (tab/heading
+        "anon`/`service_role"). Copy the **`anon` `public`** value →
+        `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+     2. Click **Reveal** on **`service_role` `secret`** → copy →
+        `SUPABASE_SERVICE_ROLE_KEY`. This key bypasses RLS: it goes only into
+        server-side env (Vercel/Railway), never into anything `NEXT_PUBLIC_*`.
+     3. On the same page, the **Publishable and secret API keys** tab is where
+        you'd create the new-format keys. Recommended before the legacy keys
+        go away: create them, swap the values into the same two variable names
+        (they're drop-in replacements), and only then deactivate the legacy
+        keys. Rotating a leaked legacy key is done in this same section.
+4. **Database connection string** (`SUPABASE_DB_URL`, used only by
+   `npm run db:migrate` from your machine):
+   - Click **Connect** in the **top bar** of your project.
+   - Choose the **Session pooler** tab (host
+     `aws-0-<region>.pooler.supabase.com`, port **5432** — not the 6543
+     transaction pooler; migrations use prepared statements).
+   - Copy the URI, replace `[YOUR-PASSWORD]` with the database password you
+     set at project creation (reset it via **Settings → Database → Database
+     password → Reset** if lost) → that full URI is `SUPABASE_DB_URL`.
+
+### 8.3 Razorpay — `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+
+1. Go to **dashboard.razorpay.com** → sign in.
+2. Pick the mode first: the **Test / Live mode** toggle sits at the top of the
+   dashboard. Test keys start `rzp_test_`, live keys `rzp_live_` (live needs
+   completed KYC). Set staging envs with test keys, production with live keys.
+3. **API keys** (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`):
+   - Left sidebar → **Account & Settings** → **API Keys** (under "Website and
+     app settings").
+   - Click **Generate Test Key** (or **Generate Key** in live mode).
+   - **Copy the Key Secret immediately** — Razorpay shows it once at
+     generation and does not store it; also click to download the CSV as
+     backup. Key ID → `RAZORPAY_KEY_ID`, secret → `RAZORPAY_KEY_SECRET`.
+   - Only Owner/Admin roles can see this page.
+4. **Webhook** (`RAZORPAY_WEBHOOK_SECRET` — *you invent this one*):
+   - **Account & Settings → Webhooks** → **Add New Webhook**.
+   - **URL**: `https://<your-domain>/api/webhooks/razorpay`.
+   - **Secret**: type a fresh random string (run `openssl rand -hex 32` and
+     paste the output here AND into `RAZORPAY_WEBHOOK_SECRET` — the two must
+     match; this is the HMAC key zybble verifies `X-Razorpay-Signature`
+     against).
+   - **Events**: tick the payment events (`payment.captured`,
+     `payment.failed`) and the `subscription.*` events.
+   - Click **Create Webhook** and make sure it's **Active**.
+5. **Plan IDs**: **Subscriptions → Plans** in the dashboard — create six plans
+   matching the seeded tiers ($19/5k, $39/15k, $69/30k, $99/50k, $149/75k,
+   $199/100k), then copy each dashboard **Plan ID** (`plan_…`) into the
+   `plans` table's `razorpay_plan_id` column. `/api/billing/checkout` reads
+   them from the database — the client never prices anything.
+
+### 8.4 Resend — `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, domain settings
+
+1. Go to **resend.com** → sign in → dashboard.
+2. **Domain** (do this before `EMAIL_FROM` — the sandbox sender
+   `onboarding@resend.dev` can only mail you):
+   - Left nav → **Domains** → **Add Domain** → enter your domain → Resend
+     shows the DNS records (DKIM/TXT/SPF).
+   - Add those records at your DNS provider (registrar, Cloudflare, …) → back
+     on the Resend **Domains** page wait for the status to turn **Verified**.
+3. **API key** (`RESEND_API_KEY`):
+   - Left nav → **API Keys** (or resend.com/api-keys) → **Create API Key**.
+   - Give it a name (e.g. `zybble-production`), choose **Sending access**,
+     optionally bind it to the verified domain → **Add**.
+   - The key (`re_…`) is shown **once** in the "View API Key" modal — copy it
+     straight into the env vars.
+4. **Webhook** (`RESEND_WEBHOOK_SECRET`):
+   - Left nav → **Webhooks** (or resend.com/webhooks) → **Add Webhook**.
+   - **Endpoint URL**: `https://<your-domain>/api/webhooks/resend`.
+   - Tick the email events: `email.sent`, `email.delivered`, `email.opened`,
+     `email.clicked`, `email.bounced`, `email.complained`, `email.failed`,
+     `email.delivery_delayed`, `email.suppressed`.
+   - After **Add** you land on the webhook's page — copy the **Signing
+     secret** (`whsec_…`) → `RESEND_WEBHOOK_SECRET`. (It stays visible on that
+     webhook's page if you need it again; rotating it is on the same page, and
+     zybble accepts multiple overlapping signatures during rotation.)
+
+### 8.5 Google Gemini — `GEMINI_API_KEY`
+
+1. Go to **aistudio.google.com** → sign in with a Google account (accept the
+   Generative AI terms the first time).
+2. Left sidebar → **Get API key** (or go straight to
+   **aistudio.google.com/apikey**).
+3. Click **Create API key** → choose **Create API key in a new project**
+   (fastest) or pick an existing Google Cloud project.
+4. Copy the key (`AIza…`) → `GEMINI_API_KEY`. Server-side only — it must never
+   end up in a `NEXT_PUBLIC_*` variable.
+
+### 8.6 Railway — worker variables and `WORKER_BASE_URL`
+
+1. Go to **railway.com** → sign in → **New Project** → **Deploy from GitHub
+   repo** → pick this repository. Railway reads `railway.toml`, builds
+   `Dockerfile.worker`, and healthchecks `/health` before going live.
+2. Click the **zybble-worker** service card → **Variables** tab.
+3. Paste the worker variables (the "Railway" block in the master table, §8.7)
+   via **Raw Editor** as `KEY=value` lines → **Update** → Railway redeploys.
+   The `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SUPABASE_URL` values are
+   the **same ones** you copied in §8.2.
+4. **Public URL** (`WORKER_BASE_URL` — set on the *Vercel* side, §8.1):
+   - Service card → **Settings** tab → **Networking** → **Generate Domain**
+     next to the health port.
+   - Railway assigns something like
+     `https://zybble-worker-production.up.railway.app` — that URL (with
+     `https://`) is `WORKER_BASE_URL`.
+   - `WORKER_SHARED_SECRET` must hold the **same value on both Railway and
+     Vercel** — it authenticates the web app's worker-health checks.
+
+### 8.7 Master table — every variable → where it comes from
+
+| Variable | Where the value comes from | Set on |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Your domain (Vercel → Settings → Domains, §8.1) | Vercel |
+| `NEXT_PUBLIC_DEV_MODE` | You (§8.0) — `false` in production | Vercel |
+| `CRON_SECRET` | You generate it (§8.0); Vercel's cron sends it automatically | Vercel |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → top-bar **Connect** or Settings → API Keys (§8.2) | Vercel **+** Railway |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API Keys → legacy **anon** (§8.2) | Vercel **+** Railway* |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API Keys → legacy **service_role** (§8.2) | Vercel **+** Railway |
+| `SUPABASE_DB_URL` | Supabase → **Connect** → Session pooler 5432 (§8.2) | Your machine only (migrations) |
+| `RAZORPAY_KEY_ID` | Razorpay → Account & Settings → API Keys (§8.3) | Vercel |
+| `RAZORPAY_KEY_SECRET` | Same dialog — shown once, download the CSV (§8.3) | Vercel |
+| `RAZORPAY_WEBHOOK_SECRET` | You invent it in the Add-Webhook dialog; same string in both places (§8.3) | Vercel |
+| `RESEND_API_KEY` | Resend → API Keys → Create (shown once) (§8.4) | Vercel |
+| `EMAIL_FROM` | Your choice on the verified domain (§8.0/8.4) | Vercel |
+| `EMAIL_REPLY_TO` | Your choice | Vercel |
+| `RESEND_VERIFIED_DOMAINS` | Your verified domain(s) (§8.4) | Vercel |
+| `RESEND_WEBHOOK_SECRET` | Resend → Webhooks → the webhook's Signing secret (`whsec_…`) (§8.4) | Vercel |
+| `GEMINI_API_KEY` | AI Studio → Get API key → Create (§8.5) | Vercel |
+| `GEMINI_MODEL` | Default `gemini-3.8-flash` (§8.0) | Vercel |
+| `MAILBOX_ENCRYPTION_KEY` | You generate it (§8.0); rotating it means re-entering SMTP passwords (docs/operations.md §6) | Vercel |
+| `WORKER_SHARED_SECRET` | You generate it; same value on both sides (§8.0/8.6) | Railway **+** Vercel |
+| `WORKER_BASE_URL` | Railway → Settings → Networking → Generate Domain (§8.6) | Vercel |
+| `WORKER_ID` | Leave unset (Railway injects `RAILWAY_REPLICA_ID`) | Railway |
+| `SCRAPER_BIN`, `PLAYWRIGHT_BROWSERS_PATH` | Baked into the image — defaults in `.env.example` | Railway (usually unset) |
+| `SCRAPER_CONCURRENCY`, `SCRAPER_PAGES_PER_BROWSER`, `SCRAPER_DEPTH`, `SCRAPER_INACTIVITY`, `SCRAPER_PROXIES` | Tuning defaults (docs/scraper.md) | Railway |
+| `WORKER_POLL_INTERVAL_MS`, `WORKER_HEARTBEAT_INTERVAL_MS`, `WORKER_LEASE_SECONDS`, `WORKER_RECOVERY_INTERVAL_MS`, `WORKER_MAX_JOB_RUNTIME_MS`, `WORKER_DRAIN_TIMEOUT_MS`, `WORKER_WORKDIR`, `PORT` | Queue/lifecycle tuning defaults (`scraper/src/config.ts`) | Railway |
+| `WORKER_DEV_MODE` | `false`/unset in production (§8.0) | Railway |
+
+\* The worker talks to Supabase with the service-role key only; the anon key
+is harmless to set but not required on Railway.
